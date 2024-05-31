@@ -1,4 +1,4 @@
-# VeloRouter Web
+# VeloRouter
 
 This is a Fork from the Web client (by [@nrenner](https://github.com/nrenner) and [contributors](https://github.com/nrenner/brouter-web/graphs/contributors)) for the BRouter routing engine (by [@abrensch](https://github.com/abrensch)).
 Design was aligned on the WebClient from Marcus Jaschen - bikerouter.de
