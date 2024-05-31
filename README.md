@@ -1,13 +1,15 @@
-# brouter-web
+# VeloRouter Web
 
-Web client (by [@nrenner](https://github.com/nrenner) and [contributors](https://github.com/nrenner/brouter-web/graphs/contributors)) for the BRouter routing engine (by [@abrensch](https://github.com/abrensch)).
+This is a Fork from the Web client (by [@nrenner](https://github.com/nrenner) and [contributors](https://github.com/nrenner/brouter-web/graphs/contributors)) for the BRouter routing engine (by [@abrensch](https://github.com/abrensch)).
+Design was aligned on the WebClient from Marcus Jaschen - bikerouter.de
 
-![demo](https://user-images.githubusercontent.com/1451988/83979926-1f6d8c80-a912-11ea-8f21-b2ed60963501.gif)
+![main-window.png](assests%2Fimg%2Fmain-window.png)
 
 Instances:
 
 -   [brouter.de/brouter-web](https://brouter.de/brouter-web/) _(provided by [@abrensch](https://github.com/abrensch))_
 -   [brouter.damsy.net](https://brouter.damsy.net) _(provided by [@bagage](https://github.com/bagage))_
+-   [bikerouter.de](https://bikerouter.de)
 
 **This repository is only about the frontend**.
 
