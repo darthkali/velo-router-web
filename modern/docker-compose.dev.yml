@@ -1,0 +1,21 @@
+# Development setup - only BRouter backend
+# Angular runs locally via `npm start`
+#
+# Usage:
+# 1. Download segments: ./scripts/download-segments.sh germany
+# 2. Start BRouter: docker-compose -f docker-compose.dev.yml up
+# 3. Start Angular: npm start
+# 4. Open: http://localhost:4200
+
+services:
+  brouter:
+    image: saesh/brouter-server:latest
+    container_name: velo-brouter-dev
+    ports:
+      - '17777:17777'
+    volumes:
+      - ./data/segments4:/segments4:ro
+      - ./data/profiles2:/profiles2:ro
+    environment:
+      - JAVA_OPTS=-Xmx1g -Xms256m
+    restart: unless-stopped

@@ -1,0 +1,5 @@
+# Data directory for BRouter
+# - segments4/: Routing segment files (*.rd5)
+# - profiles2/: Custom routing profiles
+
+# Download segments: ./scripts/download-segments.sh germany

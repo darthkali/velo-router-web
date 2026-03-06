@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import 'leaflet/dist/leaflet.css';
+
+:root {
+  --color-primary: theme('colors.primary.600');
+  --color-route-main: theme('colors.route.main');
+  --color-route-start: theme('colors.route.start');
+  --color-route-end: theme('colors.route.end');
+}
+
+html, body {
+  @apply h-full m-0 p-0;
+}
+
+body {
+  @apply font-sans text-gray-900 bg-white antialiased;
+}
+
+.leaflet-container {
+  @apply h-full w-full z-0;
+  font-family: inherit;
+}
+
+// Animated loading line for route segments
+.route-loading-line {
+  animation: dash-animation 0.8s linear infinite;
+}
+
+@keyframes dash-animation {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+// Custom waypoint marker styling
+.custom-waypoint-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+*:focus-visible {
+  @apply outline-2 outline-offset-2 outline-primary-500;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2
+           rounded-lg font-medium transition-colors
+           focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2;
+  }
+
+  .btn-primary {
+    @apply btn bg-primary-600 text-white hover:bg-primary-700
+           focus-visible:ring-primary-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-100 text-gray-900 hover:bg-gray-200
+           focus-visible:ring-gray-500;
+  }
+
+  .input {
+    @apply block w-full px-3 py-2 border border-gray-300 rounded-lg
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-4;
+  }
+}

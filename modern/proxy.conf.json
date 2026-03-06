@@ -1,0 +1,8 @@
+{
+  "/brouter": {
+    "target": "http://localhost:17777",
+    "secure": false,
+    "changeOrigin": true,
+    "logLevel": "debug"
+  }
+}

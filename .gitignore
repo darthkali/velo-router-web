@@ -8,3 +8,5 @@ nbproject/
 brouter-web*.zip
 yarn-error.log
 package-lock.json
+
+/modern/data/segments4/
