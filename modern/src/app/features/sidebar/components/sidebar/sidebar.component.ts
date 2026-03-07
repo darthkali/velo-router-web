@@ -201,8 +201,21 @@ import { LocationSearchComponent } from '../location-search/location-search.comp
           </div>
         }
       } @else {
-        <!-- Collapsed icons -->
-        <div class="flex flex-col items-center py-3 gap-2">
+        <!-- Collapsed icons - comprehensive toolbar -->
+        <div class="flex flex-col items-center py-2 gap-1">
+          <!-- Search toggle -->
+          <button
+            (click)="isCollapsed.set(false)"
+            class="p-2 rounded-lg hover:bg-gray-100"
+            title="Search Location">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+            </svg>
+          </button>
+
+          <div class="w-6 border-t border-gray-200 my-1"></div>
+
+          <!-- Draw Mode -->
           <button
             (click)="mapState.toggleDrawMode('route')"
             class="p-2 rounded-lg transition-colors"
@@ -214,6 +227,8 @@ import { LocationSearchComponent } from '../location-search/location-search.comp
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
           </button>
+
+          <!-- Undo -->
           <button
             (click)="routeState.removeLastWaypoint()"
             [disabled]="!routeState.canUndo()"
@@ -223,23 +238,103 @@ import { LocationSearchComponent } from '../location-search/location-search.comp
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
             </svg>
           </button>
+
+          <!-- Reverse -->
+          <button
+            (click)="routeState.reverseRoute()"
+            [disabled]="routeState.waypointCount() < 2"
+            class="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+            title="Reverse Route (R)">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+          </button>
+
+          <!-- Clear -->
+          <button
+            (click)="routeState.clearRoute()"
+            [disabled]="routeState.waypointCount() === 0"
+            class="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 text-red-500"
+            title="Clear Route">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+
+          <div class="w-6 border-t border-gray-200 my-1"></div>
+
+          <!-- My Location -->
           <button
             (click)="centerOnLocation()"
             class="p-2 rounded-lg hover:bg-gray-100"
             title="My Location (L)">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </button>
+
+          <!-- Fit Route -->
+          <button
+            (click)="fitRoute()"
+            [disabled]="!routeState.hasRoute()"
+            class="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+            title="Fit Route (B)">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+            </svg>
+          </button>
+
+          <div class="w-6 border-t border-gray-200 my-1"></div>
+
+          <!-- Import -->
+          <button
+            (click)="openImport.emit()"
+            class="p-2 rounded-lg hover:bg-gray-100"
+            title="Import GPX/KML (O)">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+          </button>
+
+          <!-- Export -->
           <button
             (click)="openExport.emit()"
             [disabled]="!routeState.hasRoute()"
-            class="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
-            title="Export">
+            class="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 text-primary-600"
+            title="Export Route">
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
           </button>
+
+          <div class="w-6 border-t border-gray-200 my-1"></div>
+
+          <!-- Route Alternatives (mini) -->
+          @for (alt of [0, 1, 2, 3]; track alt) {
+            <button
+              (click)="routeState.setAlternative(alt)"
+              class="w-7 h-7 text-xs rounded transition-colors flex items-center justify-center"
+              [class.bg-primary-600]="routeState.alternativeIndex() === alt"
+              [class.text-white]="routeState.alternativeIndex() === alt"
+              [class.bg-gray-100]="routeState.alternativeIndex() !== alt"
+              [class.hover:bg-gray-200]="routeState.alternativeIndex() !== alt"
+              [title]="'Alternative ' + alt">
+              {{ alt }}
+            </button>
+          }
+
+          <!-- Route stats at bottom -->
+          @if (routeState.hasRoute()) {
+            <div class="mt-auto pt-2 border-t border-gray-200 text-center">
+              <div class="text-xs font-medium text-gray-700" title="Distance">
+                {{ routeState.formattedDistance() }}
+              </div>
+              <div class="text-xs text-gray-500" title="Ascent">
+                {{ routeState.formattedAscent() }}
+              </div>
+            </div>
+          }
         </div>
       }
     </aside>
@@ -256,7 +351,7 @@ export class SidebarComponent {
   readonly mapState = inject(MapState);
   readonly profiles = DEFAULT_PROFILES;
 
-  readonly isCollapsed = signal(false);
+  readonly isCollapsed = signal(true); // Collapsed by default
   readonly openExport = output<void>();
   readonly openImport = output<void>();
 

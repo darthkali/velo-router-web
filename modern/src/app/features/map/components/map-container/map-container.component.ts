@@ -156,11 +156,8 @@ export class MapContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     zoomControl: true,
   };
 
-  layers: L.Layer[] = [
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }),
-  ];
+  // Empty layers array - base layers are now managed by MapState
+  layers: L.Layer[] = [];
 
   constructor() {
     // React to segment changes
@@ -193,11 +190,16 @@ export class MapContainerComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.removeWaypointHandler) {
       window.removeEventListener('removeWaypoint', this.removeWaypointHandler);
     }
+    // Clean up layer instances
+    this.mapState.clearLayerInstances();
   }
 
   onMapReady(map: L.Map): void {
     this.map = map;
     this.mapState.setMap(map);
+
+    // Initialize base layer from MapState
+    this.mapState.initializeBaseLayer();
 
     // Add layer groups
     this.routeLayer.addTo(map);

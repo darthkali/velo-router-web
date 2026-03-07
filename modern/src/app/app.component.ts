@@ -1,6 +1,7 @@
 import { Component, inject, signal, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MapContainerComponent } from './features/map/components/map-container/map-container.component';
+import { LayersPanelComponent } from './features/map/components/layers-panel';
 import { ExportDialogComponent } from './features/sidebar/components/export-dialog/export-dialog.component';
 import { ImportDialogComponent } from './features/sidebar/components/import-dialog/import-dialog.component';
 import { ElevationChartComponent } from './features/elevation/components/elevation-chart/elevation-chart.component';
@@ -14,6 +15,7 @@ import { MapState } from './state/map.state';
   imports: [
     CommonModule,
     MapContainerComponent,
+    LayersPanelComponent,
     ExportDialogComponent,
     ImportDialogComponent,
     ElevationChartComponent,
@@ -54,6 +56,8 @@ import { MapState } from './state/map.state';
           <!-- Map -->
           <main class="flex-1 relative">
             <app-map-container />
+            <!-- Layers Panel (right side) -->
+            <app-layers-panel />
           </main>
 
           <!-- Elevation Profile -->
