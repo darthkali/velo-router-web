@@ -1,12 +1,14 @@
 import { Component, inject, signal, HostListener, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { MapContainerComponent } from './features/map/components/map-container/map-container.component';
 import { LayersPanelComponent } from './features/map/components/layers-panel';
 import { RegionSearchComponent } from './features/map/components/region-search';
 import { ExportDialogComponent } from './features/sidebar/components/export-dialog/export-dialog.component';
 import { ImportDialogComponent } from './features/sidebar/components/import-dialog/import-dialog.component';
-import { ElevationChartComponent } from './features/elevation/components/elevation-chart/elevation-chart.component';
+import { ElevationChartComponent, RouteHoverPoint } from './features/elevation/components/elevation-chart/elevation-chart.component';
 import { SidebarComponent } from './features/sidebar/components/sidebar/sidebar.component';
+import { ToastContainerComponent } from './shared/components/toast-container/toast-container.component';
 import { RouteState } from './state/route.state';
 import { MapState } from './state/map.state';
 
@@ -15,6 +17,7 @@ import { MapState } from './state/map.state';
   standalone: true,
   imports: [
     CommonModule,
+    FormsModule,
     MapContainerComponent,
     LayersPanelComponent,
     RegionSearchComponent,
@@ -22,27 +25,41 @@ import { MapState } from './state/map.state';
     ImportDialogComponent,
     ElevationChartComponent,
     SidebarComponent,
+    ToastContainerComponent,
   ],
   template: `
     <div class="h-screen w-screen flex flex-col">
       <!-- Header -->
       <header class="bg-white border-b border-gray-200 px-4 py-2 flex items-center justify-between z-10 shrink-0">
-        <h1 class="text-xl font-bold text-primary-600">VeloRouter</h1>
+        <!-- Left side: Title and Profile Selector -->
+        <div class="flex items-center gap-4">
+          <h1 class="text-xl font-bold text-primary-600">VeloRouter</h1>
 
-        <!-- Loading indicator -->
-        @if (routeState.isCalculating()) {
-          <div class="flex items-center gap-2 text-sm text-gray-500">
-            <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-            </svg>
-            <span>Calculating...</span>
+          <!-- Profile Selector -->
+          <select
+            [ngModel]="routeState.selectedProfile()"
+            (ngModelChange)="routeState.setProfile($event)"
+            class="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+            @for (profile of routeState.availableProfiles(); track profile.id) {
+              <option [value]="profile.id">{{ profile.name }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Right side: Loading indicator and shortcuts hint -->
+        <div class="flex items-center gap-4">
+          @if (routeState.isCalculating()) {
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+              <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              <span>Calculating...</span>
+            </div>
+          }
+          <div class="text-xs text-gray-400">
+            Press <kbd class="px-1 py-0.5 bg-gray-100 rounded">?</kbd> for shortcuts
           </div>
-        }
-
-        <!-- Keyboard shortcuts hint -->
-        <div class="text-xs text-gray-400">
-          Press <kbd class="px-1 py-0.5 bg-gray-100 rounded">?</kbd> for shortcuts
         </div>
       </header>
 
@@ -57,7 +74,7 @@ import { MapState } from './state/map.state';
         <div class="flex-1 flex flex-col">
           <!-- Map -->
           <main class="flex-1 relative">
-            <app-map-container />
+            <app-map-container #mapContainer />
             <!-- Layers Panel (right side) -->
             <app-layers-panel (openRegionSearch)="regionSearch.openSearch()" />
             <!-- Region Search (fullscreen overlay) -->
@@ -67,7 +84,7 @@ import { MapState } from './state/map.state';
           <!-- Elevation Profile -->
           @if (routeState.hasRoute()) {
             <div class="shrink-0 border-t border-gray-200 bg-white">
-              <app-elevation-chart />
+              <app-elevation-chart (hoverPoint)="onElevationHoverPoint($event)" />
             </div>
           }
         </div>
@@ -83,6 +100,9 @@ import { MapState } from './state/map.state';
     <app-import-dialog
       [isOpen]="showImportDialog()"
       (close)="showImportDialog.set(false)" />
+
+    <!-- Toast Notifications -->
+    <app-toast-container />
 
     <!-- Keyboard Shortcuts Help -->
     @if (showShortcutsHelp()) {
@@ -126,6 +146,7 @@ export class AppComponent {
   readonly showShortcutsHelp = signal(false);
 
   @ViewChild('regionSearch') regionSearch!: RegionSearchComponent;
+  @ViewChild('mapContainer') mapContainer!: MapContainerComponent;
 
   @HostListener('window:keydown', ['$event'])
   handleKeyboardShortcut(event: KeyboardEvent): void {
@@ -195,7 +216,13 @@ export class AppComponent {
         (position) => {
           const map = this.mapState.map();
           if (map) {
-            map.setView([position.coords.latitude, position.coords.longitude], 14);
+            map.setView([position.coords.latitude, position.coords.longitude], 19);
+            // Show location marker with accuracy circle
+            this.mapState.showLocationMarker(
+              position.coords.latitude,
+              position.coords.longitude,
+              position.coords.accuracy
+            );
           }
         },
         (error) => {
@@ -212,6 +239,15 @@ export class AppComponent {
     if (map && waypoints.length > 0) {
       const bounds = waypoints.map(wp => [wp.lat, wp.lng] as [number, number]);
       map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }
+
+  /**
+   * Handle elevation chart hover point for map cursor synchronization
+   */
+  onElevationHoverPoint(point: RouteHoverPoint | null): void {
+    if (this.mapContainer) {
+      this.mapContainer.setElevationHoverPoint(point);
     }
   }
 }

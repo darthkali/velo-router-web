@@ -1,4 +1,4 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, inject, input, output, signal, effect, ElementRef, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ImportService, ImportResult, ImportError } from '../../../../core/services/import';
@@ -17,20 +17,38 @@ type ImportMode = 'add' | 'replace';
       <!-- Backdrop -->
       <div
         class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-        (click)="onBackdropClick($event)">
+        (click)="onBackdropClick($event)"
+        (keydown.escape)="close.emit()">
         <!-- Dialog -->
         <div
+          #dialogElement
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="import-dialog-title"
           class="bg-white rounded-xl shadow-xl w-full max-w-md transform transition-all"
-          (click)="$event.stopPropagation()">
+          (click)="$event.stopPropagation()"
+          (keydown)="onKeyDown($event)">
           <!-- Header -->
           <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">Import Route</h2>
+            <h2 id="import-dialog-title" class="text-lg font-semibold text-gray-900">Import Route</h2>
           </div>
 
           <!-- Content -->
           <div class="px-6 py-4 space-y-4">
+            <!-- Live region for status updates -->
+            <div aria-live="polite" aria-atomic="true" class="sr-only" id="import-status">
+              @if (isLoading()) {
+                Datei wird verarbeitet...
+              } @else if (error()) {
+                Fehler: {{ error() }}
+              } @else if (importResult()) {
+                {{ importResult()!.waypoints.length }} Punkte gefunden
+              }
+            </div>
+
             <!-- Drop Zone -->
             <div
+              #dropZone
               class="border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer"
               [class.border-gray-300]="!isDragging() && !importResult()"
               [class.border-primary-500]="isDragging()"
@@ -40,41 +58,53 @@ type ImportMode = 'add' | 'replace';
               [class.border-red-500]="error()"
               [class.bg-red-50]="error()"
               (click)="fileInput.click()"
+              (keydown.enter)="fileInput.click()"
+              (keydown.space)="fileInput.click(); $event.preventDefault()"
               (dragover)="onDragOver($event)"
               (dragleave)="onDragLeave($event)"
-              (drop)="onDrop($event)">
+              (drop)="onDrop($event)"
+              tabindex="0"
+              role="button"
+              aria-label="Datei zum Importieren auswählen oder hierher ziehen"
+              aria-describedby="dropzone-description">
 
               <input
                 #fileInput
                 type="file"
                 class="hidden"
                 accept=".gpx,.kml,.geojson,.json"
-                (change)="onFileSelected($event)">
+                (change)="onFileSelected($event)"
+                aria-label="Datei auswählen">
+
+              <p id="dropzone-description" class="sr-only">
+                Unterstützte Formate: GPX, KML, oder GeoJSON Dateien
+              </p>
 
               @if (isLoading()) {
-                <div class="flex flex-col items-center">
-                  <svg class="animate-spin h-10 w-10 text-primary-500 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <div class="flex flex-col items-center" role="status" aria-label="Datei wird verarbeitet">
+                  <svg class="animate-spin h-10 w-10 text-primary-500 mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
                   <p class="text-sm text-gray-600">Processing file...</p>
                 </div>
               } @else if (error()) {
-                <div class="flex flex-col items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="flex flex-col items-center" role="alert">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-red-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <p class="text-sm text-red-600 font-medium mb-1">{{ error() }}</p>
                   <button
                     type="button"
                     class="text-sm text-primary-600 hover:text-primary-700 underline"
-                    (click)="reset(); $event.stopPropagation()">
+                    (click)="reset(); $event.stopPropagation()"
+                    aria-label="Andere Datei versuchen">
                     Try another file
                   </button>
                 </div>
               } @else if (importResult()) {
-                <div class="flex flex-col items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="flex flex-col items-center" role="status">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   <p class="text-sm text-green-700 font-medium">{{ selectedFileName() }}</p>
@@ -91,13 +121,14 @@ type ImportMode = 'add' | 'replace';
                   <button
                     type="button"
                     class="text-sm text-primary-600 hover:text-primary-700 underline mt-2"
-                    (click)="reset(); $event.stopPropagation()">
+                    (click)="reset(); $event.stopPropagation()"
+                    aria-label="Andere Datei auswählen">
                     Choose different file
                   </button>
                 </div>
               } @else {
                 <div class="flex flex-col items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                   </svg>
                   <p class="text-sm text-gray-600 mb-1">
@@ -111,10 +142,10 @@ type ImportMode = 'add' | 'replace';
             <!-- Import Mode Selection -->
             @if (importResult() && !error()) {
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">
+                <label id="import-mode-label" class="block text-sm font-medium text-gray-700 mb-2">
                   Import Mode
                 </label>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-2 gap-2" role="radiogroup" aria-labelledby="import-mode-label">
                   <button
                     type="button"
                     (click)="importMode.set('add')"
@@ -122,11 +153,14 @@ type ImportMode = 'add' | 'replace';
                     [class.border-primary-500]="importMode() === 'add'"
                     [class.bg-primary-50]="importMode() === 'add'"
                     [class.border-gray-200]="importMode() !== 'add'"
-                    [class.hover:border-gray-300]="importMode() !== 'add'">
+                    [class.hover:border-gray-300]="importMode() !== 'add'"
+                    role="radio"
+                    [attr.aria-checked]="importMode() === 'add'"
+                    aria-label="Zur Route hinzufügen: Punkte an bestehende Route anhängen">
                     <div class="font-semibold" [class.text-primary-700]="importMode() === 'add'">
                       Add to Route
                     </div>
-                    <div class="text-xs text-gray-500 mt-0.5">Append points to current route</div>
+                    <div class="text-xs text-gray-500 mt-0.5" aria-hidden="true">Append points to current route</div>
                   </button>
                   <button
                     type="button"
@@ -135,17 +169,20 @@ type ImportMode = 'add' | 'replace';
                     [class.border-primary-500]="importMode() === 'replace'"
                     [class.bg-primary-50]="importMode() === 'replace'"
                     [class.border-gray-200]="importMode() !== 'replace'"
-                    [class.hover:border-gray-300]="importMode() !== 'replace'">
+                    [class.hover:border-gray-300]="importMode() !== 'replace'"
+                    role="radio"
+                    [attr.aria-checked]="importMode() === 'replace'"
+                    aria-label="Route ersetzen: Bestehende Route löschen und neu beginnen">
                     <div class="font-semibold" [class.text-primary-700]="importMode() === 'replace'">
                       Replace Route
                     </div>
-                    <div class="text-xs text-gray-500 mt-0.5">Clear and start fresh</div>
+                    <div class="text-xs text-gray-500 mt-0.5" aria-hidden="true">Clear and start fresh</div>
                   </button>
                 </div>
               </div>
 
               <!-- Preview Summary -->
-              <div class="bg-gray-50 rounded-lg p-3">
+              <div class="bg-gray-50 rounded-lg p-3" role="region" aria-label="Import Vorschau">
                 <div class="text-sm text-gray-600 space-y-1">
                   <div class="flex justify-between">
                     <span>Points to import:</span>
@@ -171,17 +208,20 @@ type ImportMode = 'add' | 'replace';
             <button
               type="button"
               (click)="close.emit()"
-              class="btn-secondary">
+              class="btn-secondary"
+              aria-label="Abbrechen">
               Cancel
             </button>
             <button
+              #importButton
               type="button"
               (click)="performImport()"
               [disabled]="!importResult() || !!error()"
               class="btn-primary"
               [class.opacity-50]="!importResult() || !!error()"
-              [class.cursor-not-allowed]="!importResult() || !!error()">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              [class.cursor-not-allowed]="!importResult() || !!error()"
+              [attr.aria-label]="(importResult()?.waypoints?.length || 0) + ' Punkte importieren'">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd" />
               </svg>
               Import {{ importResult()?.waypoints?.length || 0 }} Points
@@ -206,6 +246,10 @@ export class ImportDialogComponent {
   readonly close = output<void>();
   readonly imported = output<void>();
 
+  readonly dialogElement = viewChild<ElementRef<HTMLDivElement>>('dialogElement');
+  readonly dropZone = viewChild<ElementRef<HTMLDivElement>>('dropZone');
+  readonly importButton = viewChild<ElementRef<HTMLButtonElement>>('importButton');
+
   // State
   readonly isDragging = signal<boolean>(false);
   readonly isLoading = signal<boolean>(false);
@@ -214,9 +258,65 @@ export class ImportDialogComponent {
   readonly selectedFileName = signal<string>('');
   readonly importMode = signal<ImportMode>('replace');
 
+  private previousActiveElement: Element | null = null;
+
+  constructor() {
+    // Focus trap and focus management
+    effect(() => {
+      if (this.isOpen()) {
+        // Store the previously focused element
+        this.previousActiveElement = document.activeElement;
+
+        // Focus the drop zone when dialog opens
+        setTimeout(() => {
+          const zone = this.dropZone();
+          if (zone) {
+            zone.nativeElement.focus();
+          }
+        });
+      } else {
+        // Restore focus when dialog closes
+        if (this.previousActiveElement instanceof HTMLElement) {
+          this.previousActiveElement.focus();
+        }
+      }
+    });
+  }
+
   onBackdropClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
       this.close.emit();
+    }
+  }
+
+  onKeyDown(event: KeyboardEvent): void {
+    // Focus trap implementation
+    if (event.key === 'Tab') {
+      const dialog = this.dialogElement();
+      if (!dialog) return;
+
+      const focusableElements = dialog.nativeElement.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+
+      if (focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey) {
+        // Shift + Tab
+        if (document.activeElement === firstElement) {
+          event.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        // Tab
+        if (document.activeElement === lastElement) {
+          event.preventDefault();
+          firstElement.focus();
+        }
+      }
     }
   }
 

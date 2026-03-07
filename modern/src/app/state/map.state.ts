@@ -149,6 +149,10 @@ export class MapState {
   private baseLayerInstances = new Map<string, L.TileLayer>();
   private overlayLayerInstances = new Map<string, L.TileLayer>();
 
+  // Location marker layers
+  private locationMarker: L.CircleMarker | null = null;
+  private locationAccuracyCircle: L.Circle | null = null;
+
   // UI state
   readonly sidebarOpen = signal<boolean>(true);
   readonly sidebarTab = signal<string>('route');
@@ -345,6 +349,66 @@ export class MapState {
     this.sidebarTab.set(tab);
     if (!this.sidebarOpen()) {
       this.sidebarOpen.set(true);
+    }
+  }
+
+  /**
+   * Show a location marker with accuracy circle at the given coordinates
+   */
+  showLocationMarker(lat: number, lng: number, accuracy: number): void {
+    const map = this.map();
+    if (!map) return;
+
+    // Remove existing location marker and accuracy circle
+    if (this.locationMarker) {
+      map.removeLayer(this.locationMarker);
+      this.locationMarker = null;
+    }
+    if (this.locationAccuracyCircle) {
+      map.removeLayer(this.locationAccuracyCircle);
+      this.locationAccuracyCircle = null;
+    }
+
+    // Create accuracy circle (light blue, semi-transparent)
+    this.locationAccuracyCircle = L.circle([lat, lng], {
+      radius: accuracy,
+      color: '#3b82f6',
+      fillColor: '#3b82f6',
+      fillOpacity: 0.15,
+      weight: 1,
+      opacity: 0.4,
+    });
+    this.locationAccuracyCircle.addTo(map);
+
+    // Create location marker (blue dot with white border)
+    this.locationMarker = L.circleMarker([lat, lng], {
+      radius: 8,
+      fillColor: '#3b82f6',
+      fillOpacity: 1,
+      color: '#ffffff',
+      weight: 3,
+      opacity: 1,
+    });
+    this.locationMarker.addTo(map);
+
+    // Bring marker to front
+    this.locationMarker.bringToFront();
+  }
+
+  /**
+   * Remove the location marker and accuracy circle
+   */
+  clearLocationMarker(): void {
+    const map = this.map();
+    if (!map) return;
+
+    if (this.locationMarker) {
+      map.removeLayer(this.locationMarker);
+      this.locationMarker = null;
+    }
+    if (this.locationAccuracyCircle) {
+      map.removeLayer(this.locationAccuracyCircle);
+      this.locationAccuracyCircle = null;
     }
   }
 }

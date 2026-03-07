@@ -1,4 +1,4 @@
-import { Component, inject, input, output, signal } from '@angular/core';
+import { Component, inject, input, output, signal, effect, ElementRef, viewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExportService, ExportFormat } from '../../../../core/services/export/export.service';
@@ -13,37 +13,46 @@ import { RouteState } from '../../../../state/route.state';
       <!-- Backdrop -->
       <div
         class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-        (click)="onBackdropClick($event)">
+        (click)="onBackdropClick($event)"
+        (keydown.escape)="close.emit()">
         <!-- Dialog -->
         <div
+          #dialogElement
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="export-dialog-title"
           class="bg-white rounded-xl shadow-xl w-full max-w-md transform transition-all"
-          (click)="$event.stopPropagation()">
+          (click)="$event.stopPropagation()"
+          (keydown)="onKeyDown($event)">
           <!-- Header -->
           <div class="px-6 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold text-gray-900">Export Route</h2>
+            <h2 id="export-dialog-title" class="text-lg font-semibold text-gray-900">Export Route</h2>
           </div>
 
           <!-- Content -->
           <div class="px-6 py-4 space-y-4">
             <!-- Filename -->
             <div>
-              <label for="filename" class="block text-sm font-medium text-gray-700 mb-1">
+              <label for="export-filename" class="block text-sm font-medium text-gray-700 mb-1">
                 Filename
               </label>
               <input
-                id="filename"
+                #filenameInput
+                id="export-filename"
                 type="text"
                 [(ngModel)]="filename"
                 class="input"
-                placeholder="my-route">
+                placeholder="my-route"
+                aria-describedby="filename-hint">
+              <p id="filename-hint" class="sr-only">Geben Sie einen Dateinamen für den Export ein</p>
             </div>
 
             <!-- Format Selection -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-2">
+              <label id="format-label" class="block text-sm font-medium text-gray-700 mb-2">
                 Format
               </label>
-              <div class="grid grid-cols-3 gap-2">
+              <div class="grid grid-cols-3 gap-2" role="radiogroup" aria-labelledby="format-label">
                 @for (format of formats; track format.id) {
                   <button
                     type="button"
@@ -52,18 +61,21 @@ import { RouteState } from '../../../../state/route.state';
                     [class.border-primary-500]="selectedFormat() === format.id"
                     [class.bg-primary-50]="selectedFormat() === format.id"
                     [class.border-gray-200]="selectedFormat() !== format.id"
-                    [class.hover:border-gray-300]="selectedFormat() !== format.id">
+                    [class.hover:border-gray-300]="selectedFormat() !== format.id"
+                    role="radio"
+                    [attr.aria-checked]="selectedFormat() === format.id"
+                    [attr.aria-label]="format.label + ': ' + format.description">
                     <div class="font-semibold" [class.text-primary-700]="selectedFormat() === format.id">
                       {{ format.label }}
                     </div>
-                    <div class="text-xs text-gray-500 mt-0.5">{{ format.description }}</div>
+                    <div class="text-xs text-gray-500 mt-0.5" aria-hidden="true">{{ format.description }}</div>
                   </button>
                 }
               </div>
             </div>
 
             <!-- Route Stats -->
-            <div class="bg-gray-50 rounded-lg p-3">
+            <div class="bg-gray-50 rounded-lg p-3" role="region" aria-label="Route Statistiken">
               <div class="text-sm text-gray-600 space-y-1">
                 <div class="flex justify-between">
                   <span>Distance:</span>
@@ -86,17 +98,20 @@ import { RouteState } from '../../../../state/route.state';
             <button
               type="button"
               (click)="close.emit()"
-              class="btn-secondary">
+              class="btn-secondary"
+              aria-label="Abbrechen">
               Cancel
             </button>
             <button
+              #exportButton
               type="button"
               (click)="exportRoute()"
               [disabled]="!filename.trim()"
               class="btn-primary"
               [class.opacity-50]="!filename.trim()"
-              [class.cursor-not-allowed]="!filename.trim()">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              [class.cursor-not-allowed]="!filename.trim()"
+              [attr.aria-label]="'Route als ' + selectedFormat().toUpperCase() + ' exportieren'">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                 <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
               </svg>
               Export {{ selectedFormat().toUpperCase() }}
@@ -119,6 +134,10 @@ export class ExportDialogComponent {
   readonly isOpen = input.required<boolean>();
   readonly close = output<void>();
 
+  readonly dialogElement = viewChild<ElementRef<HTMLDivElement>>('dialogElement');
+  readonly filenameInput = viewChild<ElementRef<HTMLInputElement>>('filenameInput');
+  readonly exportButton = viewChild<ElementRef<HTMLButtonElement>>('exportButton');
+
   filename = 'velo-route';
   readonly selectedFormat = signal<ExportFormat>('gpx');
 
@@ -128,9 +147,66 @@ export class ExportDialogComponent {
     { id: 'geojson', label: 'GeoJSON', description: 'Web mapping' },
   ];
 
+  private previousActiveElement: Element | null = null;
+
+  constructor() {
+    // Focus trap and focus management
+    effect(() => {
+      if (this.isOpen()) {
+        // Store the previously focused element
+        this.previousActiveElement = document.activeElement;
+
+        // Focus the filename input when dialog opens
+        setTimeout(() => {
+          const input = this.filenameInput();
+          if (input) {
+            input.nativeElement.focus();
+            input.nativeElement.select();
+          }
+        });
+      } else {
+        // Restore focus when dialog closes
+        if (this.previousActiveElement instanceof HTMLElement) {
+          this.previousActiveElement.focus();
+        }
+      }
+    });
+  }
+
   onBackdropClick(event: MouseEvent): void {
     if (event.target === event.currentTarget) {
       this.close.emit();
+    }
+  }
+
+  onKeyDown(event: KeyboardEvent): void {
+    // Focus trap implementation
+    if (event.key === 'Tab') {
+      const dialog = this.dialogElement();
+      if (!dialog) return;
+
+      const focusableElements = dialog.nativeElement.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+
+      if (focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey) {
+        // Shift + Tab
+        if (document.activeElement === firstElement) {
+          event.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        // Tab
+        if (document.activeElement === lastElement) {
+          event.preventDefault();
+          firstElement.focus();
+        }
+      }
     }
   }
 

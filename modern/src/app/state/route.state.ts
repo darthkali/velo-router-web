@@ -1,5 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
-import { Waypoint, RouteSegment, LatLng } from '../core/services/brouter/brouter.types';
+import { Waypoint, RouteSegment, LatLng, DEFAULT_PROFILES, ProfileInfo } from '../core/services/brouter/brouter.types';
 
 /**
  * Smart segment key generation for tracking segment identity
@@ -13,9 +13,23 @@ export class RouteState {
   // Core signals
   readonly waypoints = signal<Waypoint[]>([]);
   readonly segments = signal<RouteSegment[]>([]);
-  readonly selectedProfile = signal<string>('trekking');
+  private readonly _selectedProfile = signal<string>('trekking');
+  readonly selectedProfile = this._selectedProfile.asReadonly();
   readonly alternativeIndex = signal<number>(0);
   readonly isCalculating = signal<boolean>(false);
+
+  // Available profiles
+  readonly availableProfiles = signal<ProfileInfo[]>(DEFAULT_PROFILES);
+
+  constructor() {
+    // Restore last profile from localStorage
+    if (typeof localStorage !== 'undefined') {
+      const savedProfile = localStorage.getItem('velo-router-profile');
+      if (savedProfile && this.availableProfiles().some(p => p.id === savedProfile)) {
+        this._selectedProfile.set(savedProfile);
+      }
+    }
+  }
 
   // Track segment versions to prevent stale updates
   private segmentVersions = new Map<string, number>();
@@ -163,8 +177,107 @@ export class RouteState {
     this.rebuildAllSegments();
   }
 
-  setProfile(profile: string): void {
-    this.selectedProfile.set(profile);
+  /**
+   * Insert a waypoint at a specific index (for inserting via-points on route click)
+   */
+  insertWaypointAt(index: number, latlng: LatLng, name?: string): void {
+    const wps = this.waypoints();
+
+    // Clamp index to valid range
+    const insertIndex = Math.max(0, Math.min(index, wps.length));
+
+    const newWaypoint: Waypoint = {
+      id: crypto.randomUUID(),
+      lat: latlng.lat,
+      lng: latlng.lng,
+      name,
+      type: 'via',
+    };
+
+    this.waypoints.update((wps) => {
+      const updated = [...wps];
+      updated.splice(insertIndex, 0, newWaypoint);
+
+      // Update types
+      updated.forEach((wp, i) => {
+        if (i === 0) wp.type = 'start';
+        else if (i === updated.length - 1) wp.type = 'end';
+        else wp.type = 'via';
+      });
+
+      return updated;
+    });
+
+    // Rebuild segments around the inserted waypoint
+    this.rebuildSegmentsAroundIndex(insertIndex);
+  }
+
+  /**
+   * Rebuild segments around an inserted waypoint
+   * Keeps existing segments that are not affected
+   */
+  private rebuildSegmentsAroundIndex(insertedIndex: number): void {
+    const wps = this.waypoints();
+    if (wps.length < 2) {
+      this.segments.set([]);
+      return;
+    }
+
+    this.segments.update((segs) => {
+      const newSegments: RouteSegment[] = [];
+
+      for (let i = 0; i < wps.length - 1; i++) {
+        const from = wps[i];
+        const to = wps[i + 1];
+        const key = segmentKey(from, to);
+
+        // The segment before the insertion point (index === insertedIndex - 1)
+        // and the segment after (index === insertedIndex) need recalculation
+        const needsRecalc = i === insertedIndex - 1 || i === insertedIndex;
+
+        if (needsRecalc) {
+          this.currentVersion++;
+          this.segmentVersions.set(key, this.currentVersion);
+          newSegments.push({
+            from,
+            to,
+            geojson: null,
+            loading: true,
+          });
+        } else {
+          // Try to reuse existing segment
+          // Segments before insertedIndex-1 keep their original index
+          // Segments after insertedIndex use index-1 (shifted by one)
+          const oldIndex = i < insertedIndex - 1 ? i : i - 1;
+          const existingSegment = segs[oldIndex];
+
+          if (existingSegment &&
+              existingSegment.from.id === from.id &&
+              existingSegment.to.id === to.id &&
+              existingSegment.geojson) {
+            newSegments.push(existingSegment);
+          } else {
+            this.currentVersion++;
+            this.segmentVersions.set(key, this.currentVersion);
+            newSegments.push({
+              from,
+              to,
+              geojson: null,
+              loading: true,
+            });
+          }
+        }
+      }
+
+      return newSegments;
+    });
+  }
+
+  setProfile(profileId: string): void {
+    this._selectedProfile.set(profileId);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('velo-router-profile', profileId);
+    }
     this.recalculateAllSegments();
   }
 
