@@ -15,8 +15,8 @@ export interface MapLayer {
 
 @Injectable({ providedIn: 'root' })
 export class MapState {
-  // Map instance reference
-  private mapInstance: L.Map | null = null;
+  // Map instance reference (signal-based for reactivity)
+  readonly map = signal<L.Map | null>(null);
 
   // Map view state
   readonly center = signal<L.LatLngExpression>([
@@ -61,31 +61,31 @@ export class MapState {
 
   // Actions
   setMap(map: L.Map): void {
-    this.mapInstance = map;
+    this.map.set(map);
   }
 
   getMap(): L.Map | null {
-    return this.mapInstance;
+    return this.map();
   }
 
   setCenter(center: L.LatLngExpression): void {
     this.center.set(center);
-    this.mapInstance?.setView(center, this.zoom());
+    this.map()?.setView(center, this.zoom());
   }
 
   setZoom(zoom: number): void {
     this.zoom.set(zoom);
-    this.mapInstance?.setZoom(zoom);
+    this.map()?.setZoom(zoom);
   }
 
   setView(center: L.LatLngExpression, zoom: number): void {
     this.center.set(center);
     this.zoom.set(zoom);
-    this.mapInstance?.setView(center, zoom);
+    this.map()?.setView(center, zoom);
   }
 
   fitBounds(bounds: L.LatLngBoundsExpression, options?: L.FitBoundsOptions): void {
-    this.mapInstance?.fitBounds(bounds, options);
+    this.map()?.fitBounds(bounds, options);
   }
 
   startDrawMode(mode: DrawMode): void {

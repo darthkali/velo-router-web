@@ -174,6 +174,51 @@ export class RouteState {
   }
 
   /**
+   * Remove the last waypoint (Undo functionality)
+   */
+  removeLastWaypoint(): void {
+    const wps = this.waypoints();
+    if (wps.length === 0) return;
+
+    const lastWaypoint = wps[wps.length - 1];
+    this.removeWaypoint(lastWaypoint.id);
+  }
+
+  /**
+   * Add multiple waypoints at once (for import)
+   */
+  addWaypoints(points: LatLng[]): void {
+    if (points.length === 0) return;
+
+    // Clear existing route first
+    this.clearRoute();
+
+    // Add all waypoints
+    points.forEach((point, index) => {
+      const type: 'start' | 'via' | 'end' =
+        index === 0 ? 'start' :
+        index === points.length - 1 ? 'end' : 'via';
+
+      const waypoint: Waypoint = {
+        id: crypto.randomUUID(),
+        lat: point.lat,
+        lng: point.lng,
+        type,
+      };
+
+      this.waypoints.update((wps) => [...wps, waypoint]);
+    });
+
+    // Build all segments
+    this.rebuildAllSegments();
+  }
+
+  /**
+   * Check if undo is possible
+   */
+  readonly canUndo = computed(() => this.waypointCount() > 0);
+
+  /**
    * Update segment result with version check to prevent stale updates
    */
   updateSegmentResult(

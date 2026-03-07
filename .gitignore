@@ -10,3 +10,4 @@ yarn-error.log
 package-lock.json
 
 /modern/data/segments4/
+/modern/public/segments/
