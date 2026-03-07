@@ -1,6 +1,6 @@
 # VeloRouter Modernisierung - Fortschrittsbericht
 
-**Datum:** 2026-03-06
+**Datum:** 2026-03-07
 **Status:** In Arbeit
 
 ## Abgeschlossene Phasen
@@ -46,20 +46,28 @@
 modern/src/app/
 ├── core/
 │   └── services/
-│       └── brouter/
-│           ├── brouter.service.ts      # BRouter API Client
-│           └── brouter.types.ts        # TypeScript Interfaces
+│       ├── brouter/
+│       │   ├── brouter.service.ts      # BRouter API Client
+│       │   └── brouter.types.ts        # TypeScript Interfaces + Profile
+│       └── export/
+│           └── export.service.ts       # GPX/KML/GeoJSON Export
 ├── features/
-│   └── map/
-│       ├── components/
-│       │   └── map-container/
-│       │       └── map-container.component.ts
-│       └── services/
-│           └── routing.service.ts      # Route-Berechnung
+│   ├── map/
+│   │   ├── components/
+│   │   │   └── map-container/
+│   │   │       └── map-container.component.ts  # Draggable Markers
+│   │   └── services/
+│   │       └── routing.service.ts      # Version-aware Routing
+│   └── sidebar/
+│       └── components/
+│           ├── export-dialog/
+│           │   └── export-dialog.component.ts
+│           └── profile-selector/
+│               └── profile-selector.component.ts
 ├── state/
-│   ├── route.state.ts                  # Route State (Signals)
+│   ├── route.state.ts                  # Smart Segment Management
 │   └── map.state.ts                    # Map State (Signals)
-├── app.component.ts                    # Root Component
+├── app.component.ts                    # Root mit Export-Dialog
 └── app.config.ts                       # App Configuration
 ```
 
@@ -97,13 +105,38 @@ modern/src/app/
 - Rote gestrichelte Linie bei Fehler
 - Solide blaue Linie für berechnete Route
 
+### Export-Funktionalität ✅
+- **ExportService** (`src/app/core/services/export/export.service.ts`)
+  - GPX-Export mit Metadaten und Stats-Kommentar
+  - KML-Export für Google Earth
+  - GeoJSON-Export für Web-Mapping
+- **Export-Dialog** (`src/app/features/sidebar/components/export-dialog/`)
+  - Modaler Dialog mit Format-Auswahl
+  - Dateiname-Eingabe
+  - Route-Statistiken Vorschau
+
+### Profile ✅
+- 8 Profile verfügbar:
+  - Trekking, Quaelnix Gravel, Gravel, Fast Bike
+  - Trekking Steep, MTB, Safety, Shortest
+- Profile-Selector mit Beschreibungen
+- Profile-Dateien in `data/profiles2/`
+
+### Bug-Fixes ✅
+- Berechnung von Distance/Ascent/Time korrigiert (große Zahlen-Bug)
+- Proper Number-Parsing für String/Number Properties
+
 ## Offene Aufgaben
 
-### Task 6: UI Components ⏳
-- [ ] Export-Dialog (GPX, KML, GeoJSON)
+### Elevation Profile ⏳
+- [ ] SVG-basiertes Höhenprofil
+- [ ] Interaktive Hover-Informationen
+
+### Weitere Features ⏳
 - [ ] Sidebar mit Waypoint-Liste
-- [ ] Profile-Editor
-- [ ] Elevation Profile
+- [ ] POI-Suche
+- [ ] Track-Import (GPX)
+- [ ] Rundtour-Planer
 
 ### Task 7: Tests ⏳
 - [ ] Unit Tests für BRouterService
@@ -137,6 +170,7 @@ open http://localhost:4200
 ## Nächste Session
 
 Empfohlene Prioritäten:
-1. Export-Funktion implementieren
+1. Elevation Profile Komponente
 2. Sidebar mit Waypoint-Management
-3. Unit Tests für Core Services
+3. Track-Import (GPX laden)
+4. Unit Tests für Core Services

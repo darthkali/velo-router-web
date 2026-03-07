@@ -90,13 +90,12 @@ export interface ProfileInfo {
 }
 
 export const DEFAULT_PROFILES: ProfileInfo[] = [
-  { id: 'trekking', name: 'Trekking', isCustom: false },
-  { id: 'fastbike', name: 'Fast Bike', isCustom: false },
-  { id: 'safety', name: 'Safety', isCustom: false },
-  { id: 'shortest', name: 'Shortest', isCustom: false },
-  { id: 'trekking-steep', name: 'Trekking Steep', isCustom: false },
-  { id: 'moped', name: 'Moped', isCustom: false },
-  { id: 'car-eco', name: 'Car Eco', isCustom: false },
-  { id: 'car-fast', name: 'Car Fast', isCustom: false },
-  { id: 'rail', name: 'Rail', isCustom: false },
+  { id: 'trekking', name: 'Trekking', description: 'Allround-Profil für Radtouren', isCustom: false },
+  { id: 'quaelnix-gravel', name: 'Quaelnix Gravel', description: 'Optimiert für Gravel und Steigungen', isCustom: false },
+  { id: 'gravel', name: 'Gravel', description: 'Schotterweg-optimiert', isCustom: false },
+  { id: 'fastbike', name: 'Fast Bike', description: 'Schnelle Straßenrouten', isCustom: false },
+  { id: 'trekking-steep', name: 'Trekking Steep', description: 'Steile Strecken bevorzugt', isCustom: false },
+  { id: 'mtb', name: 'MTB', description: 'Mountainbike-Trails', isCustom: false },
+  { id: 'safety', name: 'Safety', description: 'Sichere Wege bevorzugt', isCustom: false },
+  { id: 'shortest', name: 'Shortest', description: 'Kürzeste Distanz', isCustom: false },
 ];

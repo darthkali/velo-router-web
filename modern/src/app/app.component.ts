@@ -1,13 +1,16 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MapContainerComponent } from './features/map/components/map-container/map-container.component';
+import { ExportDialogComponent } from './features/sidebar/components/export-dialog/export-dialog.component';
+import { ElevationChartComponent } from './features/elevation/components/elevation-chart/elevation-chart.component';
 import { RouteState } from './state/route.state';
 import { MapState } from './state/map.state';
+import { DEFAULT_PROFILES } from './core/services/brouter/brouter.types';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, MapContainerComponent],
+  imports: [CommonModule, MapContainerComponent, ExportDialogComponent, ElevationChartComponent],
   template: `
     <div class="h-screen w-screen flex flex-col">
       <!-- Header -->
@@ -16,15 +19,21 @@ import { MapState } from './state/map.state';
           <h1 class="text-xl font-bold text-primary-600">VeloRouter</h1>
 
           <!-- Profile Selector -->
-          <select
-            [value]="routeState.selectedProfile()"
-            (change)="onProfileChange($event)"
-            class="input w-48">
-            <option value="trekking">Trekking</option>
-            <option value="fastbike">Fast Bike</option>
-            <option value="safety">Safety</option>
-            <option value="shortest">Shortest</option>
-          </select>
+          <div class="relative">
+            <select
+              [value]="routeState.selectedProfile()"
+              (change)="onProfileChange($event)"
+              class="input w-56 pr-8 appearance-none cursor-pointer">
+              @for (profile of profiles; track profile.id) {
+                <option [value]="profile.id">{{ profile.name }}</option>
+              }
+            </select>
+            <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+              <svg class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
         </div>
 
         <div class="flex items-center gap-2">
@@ -54,9 +63,12 @@ import { MapState } from './state/map.state';
             </button>
           }
 
-          <!-- Export (placeholder) -->
+          <!-- Export -->
           @if (routeState.hasRoute()) {
-            <button class="btn-primary">
+            <button (click)="showExportDialog.set(true)" class="btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
               Export
             </button>
           }
@@ -67,6 +79,13 @@ import { MapState } from './state/map.state';
       <main class="flex-1 relative">
         <app-map-container />
       </main>
+
+      <!-- Elevation Profile -->
+      @if (routeState.hasRoute()) {
+        <div class="px-4 py-2 bg-gray-50 border-t border-gray-200">
+          <app-elevation-chart />
+        </div>
+      }
 
       <!-- Footer Stats -->
       @if (routeState.hasRoute()) {
@@ -90,6 +109,11 @@ import { MapState } from './state/map.state';
         </footer>
       }
     </div>
+
+    <!-- Export Dialog -->
+    <app-export-dialog
+      [isOpen]="showExportDialog()"
+      (close)="showExportDialog.set(false)" />
   `,
   styles: [`
     :host {
@@ -102,6 +126,8 @@ import { MapState } from './state/map.state';
 export class AppComponent {
   readonly routeState = inject(RouteState);
   readonly mapState = inject(MapState);
+  readonly profiles = DEFAULT_PROFILES;
+  readonly showExportDialog = signal(false);
 
   onProfileChange(event: Event): void {
     const select = event.target as HTMLSelectElement;

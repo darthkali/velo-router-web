@@ -30,28 +30,31 @@ export class RouteState {
 
   readonly totalDistance = computed(() => {
     return this.segments()
-      .filter((s) => s.geojson)
+      .filter((s) => s.geojson && !s.loading && !s.error)
       .reduce((sum, s) => {
-        const trackLength = s.geojson?.properties?.['track-length'] as number | undefined;
-        return sum + (trackLength ?? 0);
+        const trackLength = s.geojson?.properties?.['track-length'];
+        const value = typeof trackLength === 'string' ? parseFloat(trackLength) : (trackLength ?? 0);
+        return sum + (isNaN(value) ? 0 : value);
       }, 0);
   });
 
   readonly totalAscent = computed(() => {
     return this.segments()
-      .filter((s) => s.geojson)
+      .filter((s) => s.geojson && !s.loading && !s.error)
       .reduce((sum, s) => {
-        const ascent = s.geojson?.properties?.['filtered ascend'] as number | undefined;
-        return sum + (ascent ?? 0);
+        const ascent = s.geojson?.properties?.['filtered ascend'];
+        const value = typeof ascent === 'string' ? parseFloat(ascent) : (ascent ?? 0);
+        return sum + (isNaN(value) ? 0 : value);
       }, 0);
   });
 
   readonly totalTime = computed(() => {
     return this.segments()
-      .filter((s) => s.geojson)
+      .filter((s) => s.geojson && !s.loading && !s.error)
       .reduce((sum, s) => {
-        const time = s.geojson?.properties?.['total-time'] as number | undefined;
-        return sum + (time ?? 0);
+        const time = s.geojson?.properties?.['total-time'];
+        const value = typeof time === 'string' ? parseFloat(time) : (time ?? 0);
+        return sum + (isNaN(value) ? 0 : value);
       }, 0);
   });
 
