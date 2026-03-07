@@ -2,6 +2,21 @@ import { Injectable, signal, computed } from '@angular/core';
 import { Waypoint, RouteSegment, LatLng, DEFAULT_PROFILES, ProfileInfo } from '../core/services/brouter/brouter.types';
 
 /**
+ * Serializable snapshot of route state for saving/loading
+ */
+export interface RouteSnapshot {
+  waypoints: Array<{
+    id: string;
+    lat: number;
+    lng: number;
+    name?: string;
+    type: 'start' | 'via' | 'end';
+  }>;
+  profile: string;
+  alternativeIndex: number;
+}
+
+/**
  * Smart segment key generation for tracking segment identity
  */
 function segmentKey(from: Waypoint, to: Waypoint): string {
@@ -397,6 +412,83 @@ export class RouteState {
 
     // Full rebuild needed for reverse
     this.rebuildAllSegments();
+  }
+
+  /**
+   * Get a serializable snapshot of the current route state
+   * Used for saving to .velo files
+   */
+  getSnapshot(): RouteSnapshot {
+    return {
+      waypoints: this.waypoints().map((wp) => ({
+        id: wp.id,
+        lat: wp.lat,
+        lng: wp.lng,
+        name: wp.name,
+        type: wp.type ?? 'via',
+      })),
+      profile: this.selectedProfile(),
+      alternativeIndex: this.alternativeIndex(),
+    };
+  }
+
+  /**
+   * Load route state from a snapshot
+   * Used when opening .velo files
+   */
+  loadSnapshot(snapshot: RouteSnapshot): void {
+    // Clear existing route
+    this.clearRoute();
+
+    // Set profile first (before adding waypoints, which triggers routing)
+    if (snapshot.profile) {
+      this._selectedProfile.set(snapshot.profile);
+    }
+
+    // Set alternative index
+    if (snapshot.alternativeIndex !== undefined) {
+      this.alternativeIndex.set(snapshot.alternativeIndex);
+    }
+
+    // Add waypoints
+    if (snapshot.waypoints && snapshot.waypoints.length > 0) {
+      const waypoints: Waypoint[] = snapshot.waypoints.map((wp, index) => ({
+        id: wp.id || crypto.randomUUID(),
+        lat: wp.lat,
+        lng: wp.lng,
+        name: wp.name,
+        type: wp.type || (
+          index === 0 ? 'start' :
+          index === snapshot.waypoints.length - 1 ? 'end' : 'via'
+        ),
+      }));
+
+      this.waypoints.set(waypoints);
+      this.rebuildAllSegments();
+    }
+  }
+
+  /**
+   * Compute a hash of the current state for dirty detection
+   */
+  computeStateHash(): string {
+    const snapshot = this.getSnapshot();
+    const data = JSON.stringify({
+      waypoints: snapshot.waypoints.map((w) => ({
+        lat: w.lat.toFixed(6),
+        lng: w.lng.toFixed(6),
+        name: w.name,
+      })),
+      profile: snapshot.profile,
+      alternativeIndex: snapshot.alternativeIndex,
+    });
+
+    // Simple djb2 hash
+    let hash = 5381;
+    for (let i = 0; i < data.length; i++) {
+      hash = ((hash << 5) + hash) + data.charCodeAt(i);
+    }
+    return hash.toString(36);
   }
 
   /**
