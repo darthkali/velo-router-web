@@ -1,11 +1,30 @@
-FROM node:lts as build
-RUN mkdir /tmp/brouter-web
-WORKDIR /tmp/brouter-web
-COPY . .
-RUN yarn install
-RUN yarn run build
+# Build stage
+FROM node:20-alpine AS builder
 
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build production bundle
+RUN npm run build
+
+# Production stage
 FROM nginx:alpine
-COPY --from=build /tmp/brouter-web/index.html /usr/share/nginx/html
-COPY --from=build /tmp/brouter-web/dist /usr/share/nginx/html/dist
-VOLUME [ "/usr/share/nginx/html" ]
+
+# Copy nginx config
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Copy built assets
+COPY --from=builder /app/dist/modern/browser /usr/share/nginx/html
+
+# Expose port
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
