@@ -1,7 +1,8 @@
-import { Component, inject, signal, HostListener } from '@angular/core';
+import { Component, inject, signal, HostListener, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MapContainerComponent } from './features/map/components/map-container/map-container.component';
 import { LayersPanelComponent } from './features/map/components/layers-panel';
+import { RegionSearchComponent } from './features/map/components/region-search';
 import { ExportDialogComponent } from './features/sidebar/components/export-dialog/export-dialog.component';
 import { ImportDialogComponent } from './features/sidebar/components/import-dialog/import-dialog.component';
 import { ElevationChartComponent } from './features/elevation/components/elevation-chart/elevation-chart.component';
@@ -16,6 +17,7 @@ import { MapState } from './state/map.state';
     CommonModule,
     MapContainerComponent,
     LayersPanelComponent,
+    RegionSearchComponent,
     ExportDialogComponent,
     ImportDialogComponent,
     ElevationChartComponent,
@@ -57,7 +59,9 @@ import { MapState } from './state/map.state';
           <main class="flex-1 relative">
             <app-map-container />
             <!-- Layers Panel (right side) -->
-            <app-layers-panel />
+            <app-layers-panel (openRegionSearch)="regionSearch.openSearch()" />
+            <!-- Region Search (fullscreen overlay) -->
+            <app-region-search #regionSearch />
           </main>
 
           <!-- Elevation Profile -->
@@ -120,6 +124,8 @@ export class AppComponent {
   readonly showExportDialog = signal(false);
   readonly showImportDialog = signal(false);
   readonly showShortcutsHelp = signal(false);
+
+  @ViewChild('regionSearch') regionSearch!: RegionSearchComponent;
 
   @HostListener('window:keydown', ['$event'])
   handleKeyboardShortcut(event: KeyboardEvent): void {

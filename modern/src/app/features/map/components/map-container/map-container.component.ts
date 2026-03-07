@@ -7,6 +7,8 @@ import { MapState } from '../../../../state/map.state';
 import { RoutingService } from '../../services/routing.service';
 import { environment } from '../../../../../environments/environment';
 import { Waypoint } from '../../../../core/services/brouter/brouter.types';
+import { BoundaryDisplayComponent } from '../boundary-display/boundary-display.component';
+import { POIDisplayComponent } from '../poi-display/poi-display.component';
 
 // Fix Leaflet default icon paths
 delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)['_getIconUrl'];
@@ -53,7 +55,7 @@ function createWaypointIcon(type: 'start' | 'via' | 'end', index: number): L.Div
 @Component({
   selector: 'app-map-container',
   standalone: true,
-  imports: [CommonModule, LeafletModule],
+  imports: [CommonModule, LeafletModule, BoundaryDisplayComponent, POIDisplayComponent],
   template: `
     <div class="h-full w-full relative">
       <div
@@ -114,6 +116,12 @@ function createWaypointIcon(type: 'start' | 'via' | 'end', index: number): L.Div
           </div>
         </div>
       }
+
+      <!-- Boundary display component (renders GeoJSON boundaries on the map) -->
+      <app-boundary-display />
+
+      <!-- POI display component (renders POI markers on the map) -->
+      <app-poi-display />
     </div>
   `,
   styles: [`
@@ -136,6 +144,15 @@ function createWaypointIcon(type: 'start' | 'via' | 'end', index: number): L.Div
     :host ::ng-deep .custom-waypoint-marker {
       background: transparent;
       border: none;
+    }
+
+    :host ::ng-deep .custom-poi-marker {
+      background: transparent;
+      border: none;
+    }
+
+    :host ::ng-deep .poi-popup .leaflet-popup-content {
+      margin: 0;
     }
   `],
 })
